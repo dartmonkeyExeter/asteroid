@@ -1,5 +1,6 @@
 import pygame
 import math
+import random
 
 pygame.init()
 win = pygame.display.set_mode((500, 500), pygame.RESIZABLE)
@@ -16,6 +17,8 @@ class Player:
         self.angle = angle
 
 new_player = Player((200, 200), 270)
+triangle_base = 40
+triangle_size = 20  # Adjust the size of the triangle
 
 class Bullet:
     def __init__(self, position, velocity):
@@ -23,8 +26,32 @@ class Bullet:
         self.velocity = pygame.math.Vector2(velocity)
         self.min_speed = 5.0
 
-triangle_base = 40
-triangle_size = 20  # Adjust the size of the triangle
+class Asteroid:
+    def __init__(self, position, velocity):
+        self.position = pygame.math.Vector2(position)
+        self.init_pos = pygame.math.Vector2(position)
+        self.velocity = pygame.math.Vector2(velocity)
+        self.max_speed = 5.0
+        self.angle = 0
+        self.points = []
+        self.generate_shape()
+
+    def generate_shape(self):
+        num_points = 12
+        base_radius = random.randint(10,20)
+        irregularity = 7.5  # Adjust the irregularity factor
+
+        for i in range(num_points):
+            angle = math.radians(360 * i / num_points)
+            radius = base_radius + random.uniform(-irregularity, irregularity)
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            self.points.append(pygame.math.Vector2(x, y))
+        
+        self.points = [self.position + point.rotate(-self.angle) for point in self.points]
+        
+
+test_asteroid = Asteroid((100, 100),  (random.uniform(-5, 5), random.uniform(-5, 5))) 
 
 bullets = []
 
@@ -35,7 +62,6 @@ previous_velocity = pygame.math.Vector2(0, 1)
 while running:
     clock.tick(fps)
     new_player.angle = new_player.angle % 360
-    print(new_player.angle)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -69,9 +95,19 @@ while running:
     
     new_player.position += new_player.velocity
     
-    rotated_point1 = new_player.position + pygame.math.Vector2(triangle_base / 2, 0).rotate(-new_player.angle)
-    rotated_point2 = new_player.position + pygame.math.Vector2(triangle_size / 2, 0).rotate(-new_player.angle + 120)
-    rotated_point3 = new_player.position + pygame.math.Vector2(triangle_size / 2, 0).rotate(-new_player.angle - 120)
+    player_rotated_point1 = new_player.position + pygame.math.Vector2(triangle_base / 2, 0).rotate(-new_player.angle)
+    player_rotated_point2 = new_player.position + pygame.math.Vector2(triangle_size / 2, 0).rotate(-new_player.angle + 120)
+    player_rotated_point3 = new_player.position + pygame.math.Vector2(triangle_size / 2, 0).rotate(-new_player.angle - 120)
+
+
+    test_asteroid.position.x += test_asteroid.velocity.x
+    test_asteroid.position.y += test_asteroid.velocity.y
+    test_asteroid.velocity.scale_to_length(min(test_asteroid.velocity.length(), test_asteroid.max_speed))
+
+    for i in range(len(test_asteroid.points)):
+        test_asteroid.points[i] += test_asteroid.velocityaw
+
+    pygame.draw.polygon(win, (255, 255, 255), test_asteroid.points, 1)
 
     if new_player.position.x > 500:
         new_player.position.x = 0
@@ -85,7 +121,8 @@ while running:
     if len(bullets) > 4:
         bullets.pop(0)
 
-    pygame.draw.polygon(win, (255, 255, 255), (rotated_point1, rotated_point2, rotated_point3), 1)
+    pygame.draw.polygon(win, (255, 255, 255), (player_rotated_point1, player_rotated_point2, player_rotated_point3), 1)
+
     for bullet in bullets:
         bullet.position += bullet.velocity
         pygame.draw.circle(win, (255, 255, 255), (int(bullet.position.x), int(bullet.position.y)), 1)
