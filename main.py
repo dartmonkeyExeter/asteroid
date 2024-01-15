@@ -41,11 +41,11 @@ class Asteroid:
     def generate_shape(self):
         num_points = math.ceil(12 / self.size_modifier)
         self.base_radius = random.randint(10,20) / self.size_modifier
-        irregularity = 7.5 / self.size_modifier # Adjust the irregularity factor
+        self.irregularity = 7.5 / self.size_modifier # Adjust the irregularity factor
 
         for i in range(num_points):
             angle = math.radians(360 * i / num_points)
-            radius = self.base_radius + random.uniform(-irregularity, irregularity)
+            radius = self.base_radius + random.uniform(0, self.irregularity)
             x = radius * math.cos(angle)
             y = radius * math.sin(angle)
             self.points.append(pygame.math.Vector2(x, y))
@@ -54,12 +54,12 @@ class Asteroid:
     
     def bullet_collision(self, bullet_list, asteroid_list):
         for i in bullet_list:
-            if self.position.distance_to(i.position) < self.base_radius + 1 and self.size_modifier == 1:
+            if self.position.distance_to(i.position) <= self.base_radius + 1 and self.size_modifier == 1:
                 bullet_list.remove(i)
                 asteroid_list.remove(self)
                 asteroid_list.append(Asteroid(self.position + pygame.math.Vector2(random.uniform(-1, 1), random.uniform(-1, 1)), (random.uniform(-1, 0), random.uniform(-0.5, 0.5)), self.size_modifier * 2))
                 asteroid_list.append(Asteroid(self.position + pygame.math.Vector2(random.uniform(-1, 1), random.uniform(-1, 1)), (random.uniform(0, 1), random.uniform(-0.5, 0.5)), self.size_modifier * 2))
-            elif self.position.distance_to(i.position) < self.base_radius + 1:
+            elif self.position.distance_to(i.position) <= self.base_radius + 1:
                 bullet_list.remove(i)
                 asteroid_list.remove(self)
     def player_collision(self, player):
@@ -67,19 +67,19 @@ class Asteroid:
             print("Collision")
     
     def out_of_bounds(self, asteroid_list):
-        if self.position.x > 600:
+        if self.position.x > 550:
             asteroid_list.remove(self)
-        elif self.position.x < -100:
-            self.position.x = 500
+        elif self.position.x < -50:
+            asteroid_list.remove(self)
         if self.position.y > 500:
-            self.position.y = 0
+            asteroid_list.remove(self)
         elif self.position.y < 0:
-            self.position.y = 500
+            asteroid_list.remove(self)
 
 asteroids = []
 bullets = []
 
-def asteroid_spawner():
+def asteroid_spawner(asteroids_list):
     # Determine a random side of the screen (left, right, top, or bottom)
     side = random.choice(["left", "right", "top", "bottom"])
     
@@ -92,14 +92,11 @@ def asteroid_spawner():
     elif side == "bottom":
         position = (random.randint(0, 500), random.randint(525, 550))
     
-    asteroids.append(Asteroid(position, (0, 0), 1))
+    asteroids_list.append(Asteroid(position, (0, 0), 1))
     
-    to_player = pygame.math.Vector2(new_player.position - asteroids[-1].position)
-    asteroids[-1].velocity = to_player.normalize() * random.uniform(0.5, 1.5)
-
-
-for i in range(2):
-    asteroid_spawner()
+    to_player = pygame.math.Vector2(new_player.position - asteroids_list[-1].position)
+    asteroids_list[-1].velocity = to_player.normalize() * random.uniform(0.5, 1.5)
+    return asteroids_list
 
 timer = 0
 
@@ -109,6 +106,7 @@ previous_velocity = pygame.math.Vector2(0, 1)
 
 while running:
     clock.tick(fps)
+    print(clock.get_fps())
     timer += 0.01
     new_player.angle = new_player.angle % 360
     for event in pygame.event.get():
@@ -160,15 +158,15 @@ while running:
     if len(bullets) > 4:
         bullets.pop(0)
 
+    if timer > 1 and len(asteroids) < 10:
+        asteroids = asteroid_spawner(asteroids)
+        timer = 0
+
     pygame.draw.polygon(win, (255, 255, 255), (player_rotated_point1, player_rotated_point2, player_rotated_point3), 1)
 
     for bullet in bullets:
         bullet.position += bullet.velocity
         pygame.draw.circle(win, (255, 255, 255), (int(bullet.position.x), int(bullet.position.y)), 1)
-
-    if len(asteroids) < 15 and timer > 1:
-        asteroid_spawner()
-        timer = 0
 
     for ast in asteroids:
         ast.position += ast.velocity
